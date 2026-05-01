@@ -1,1 +1,9 @@
 data/raw/
+data/processed/
+reports/
+models/
+*.joblib
+*.pkl
+__pycache__/
+*.pyc
+.env
