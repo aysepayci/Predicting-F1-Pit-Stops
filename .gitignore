@@ -1,6 +1,7 @@
 data/raw/
 data/processed/
-reports/
+reports/*.png
+reports/*.jpg
 models/*.joblib
 models/*.pkl
 *.joblib
