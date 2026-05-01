@@ -59,3 +59,5 @@ notebooks/      — EDA only, numbered
 experiments/    — YAML configs per run
 submissions/    — CSV outputs + score log
 ```
+
+| 2025-05-02 | LightGBM v1 (baseline) | 0.932 ± 0.013 | - | first real model |
