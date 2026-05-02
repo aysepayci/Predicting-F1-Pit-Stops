@@ -58,11 +58,26 @@ def main() -> None:
     # ── 3. CV ─────────────────────────────────────────────────────────────────
     print("\n[3/4] Running cross-validation...")
 
+    config = LGBMConfig(
+        n_estimators      = 2000,
+        learning_rate     = 0.0217,
+        num_leaves        = 156,
+        max_depth         = 9,
+        min_child_samples = 132,
+        feature_fraction  = 0.663,
+        bagging_fraction  = 0.611,
+        bagging_freq      = 5,
+        reg_alpha         = 0.0885,
+        reg_lambda        = 0.597,
+        scale_pos_weight  = 4.66,
+        early_stopping_rounds = 100,
+    )
+
     results = run_cv(
         X         = X_train,
         y         = y_train,
         groups    = groups,
-        build_model_fn = lambda: LGBMModel(LGBMConfig()),
+        build_model_fn = lambda: LGBMModel(config),
         n_splits  = N_FOLDS,
         seed      = RANDOM_SEED,
         verbose   = True,
