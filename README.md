@@ -61,3 +61,4 @@ submissions/    — CSV outputs + score log
 ```
 
 | 2025-05-02 | LightGBM v1 (baseline) | 0.932 ± 0.013 | - | first real model |
+| 2025-05-02 | LightGBM v1 | 0.932 ± 0.013 | 0.917 | baseline, 37 features |
