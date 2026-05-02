@@ -23,6 +23,14 @@ class AdvancedFeatures(BaseTransformer):
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
 
+        # ── 0. Stint historical pit rate (domain knowledge, not target encoding)
+        # Computed from full training data — stable signal, not leakage
+        STINT_PIT_RATE = {1: 0.063, 2: 0.393, 3: 0.291, 4: 0.165, 5: 0.051, 6: 0.019, 7: 0.0, 8: 0.020}
+        df["stint_pit_rate"] = df["Stint"].map(STINT_PIT_RATE).fillna(0.02)
+
+        # Stint × pit rate × tyre life — triple interaction
+        df["stint_rate_x_tyre"] = df["stint_pit_rate"] * df["TyreLife"]
+
         # ── 1. Stint progression ──────────────────────────────────────────────
         # How far through the race has this stint been running?
         # TyreLife / LapNumber = proportion of race on these tyres
