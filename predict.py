@@ -1,13 +1,6 @@
 """
 Inference script — generates Kaggle submission.
 Run: python predict.py
-
-Workflow:
-  1. Load train + test
-  2. Build features (same pipeline as train.py)
-  3. Retrain on FULL training data (no CV — use all signal)
-  4. Predict on test
-  5. Save submissions/sub_YYYYMMDD_HHMMSS.csv
 """
 import sys
 import time
@@ -36,67 +29,51 @@ def main() -> None:
     test_df  = pd.read_csv(TEST_FILE)
     print(f"      Train: {train_df.shape} | Test: {test_df.shape}")
 
-    # Keep test IDs before pipeline (pipeline may drop/reindex)
-    test_ids = test_df[ID_COL].copy()
-
     # ── 2. Feature engineering ────────────────────────────────────────────────
     print("\n[2/4] Building features...")
+
+    # Kaggle expects ALL 188,165 rows.
+    # Pre-Season Testing rows → prediction = 0.0 (no strategic pit stops in testing)
+    is_testing = test_df["Race"] == "Pre-Season Testing"
+    full_submission = pd.DataFrame({ID_COL: test_df[ID_COL], TARGET: 0.0})
+    print(f"      Pre-Season Testing rows (pred=0.0): {is_testing.sum():,}")
+    print(f"      Real race rows (will be predicted) : {(~is_testing).sum():,}")
+
     X_train, X_test, y_train, feature_names = build_features(
         train_df, test_df=test_df, drop_testing=True
     )
     print(f"      X_train: {X_train.shape} | X_test: {X_test.shape}")
 
-    # Align test IDs after Pre-Season Testing rows are dropped from train
-    # Test set keeps all its rows (no Pre-Season Testing in test typically)
-    assert X_test is not None, "X_test should not be None"
-    assert len(X_test) == len(test_ids), \
-        f"Test size mismatch: {len(X_test)} features vs {len(test_ids)} ids"
-
     # ── 3. Full retrain ───────────────────────────────────────────────────────
     print("\n[3/4] Training on full dataset...")
-    print("      (No validation set — using best_iter from CV: ~450 avg)")
-
-    # Use average best_iteration from CV runs as fixed n_estimators
-    # This avoids needing a val set while using the CV-tuned stopping point
-    config = LGBMConfig(
-        n_estimators=450,        # avg best_iter from 5-fold CV
-        learning_rate=0.05,
-        early_stopping_rounds=999,  # effectively disabled
-    )
-
-    # Trick: use 5% of train as a dummy val to satisfy lgb.train API
-    # but ignore early stopping (n_estimators is already fixed)
-    val_size  = max(1000, int(len(X_train) * 0.05))
-    X_val_dummy = X_train.iloc[-val_size:]
-    y_val_dummy = y_train.iloc[-val_size:]
-    X_tr_main   = X_train.iloc[:-val_size]
-    y_tr_main   = y_train.iloc[:-val_size]
-
+    config = LGBMConfig(n_estimators=450, learning_rate=0.05, early_stopping_rounds=999)
+    val_size = max(1000, int(len(X_train) * 0.05))
     model = LGBMModel(config)
-    model.fit(X_tr_main, y_tr_main, X_val_dummy, y_val_dummy)
+    model.fit(
+        X_train.iloc[:-val_size], y_train.iloc[:-val_size],
+        X_train.iloc[-val_size:], y_train.iloc[-val_size:],
+    )
     print(f"      Training complete. Best iter: {model.best_iteration_}")
 
     # ── 4. Predict ────────────────────────────────────────────────────────────
     print("\n[4/4] Generating predictions...")
     preds = model.predict_proba(X_test)
     print(f"      Pred range : [{preds.min():.4f}, {preds.max():.4f}]")
-    print(f"      Pred mean  : {preds.mean():.4f}  (train positive rate: {y_train.mean():.4f})")
+    print(f"      Pred mean  : {preds.mean():.4f}  (train pos rate: {y_train.mean():.4f})")
 
-    # ── 5. Save submission ────────────────────────────────────────────────────
+    # Fill real-race predictions into the full template
+    real_ids = test_df.loc[~is_testing, ID_COL].values
+    full_submission.loc[full_submission[ID_COL].isin(real_ids), TARGET] = preds
+
+    # ── 5. Save ───────────────────────────────────────────────────────────────
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     sub_path  = SUBMISSIONS / f"sub_lgbm_v1_{timestamp}.csv"
-
-    submission = pd.DataFrame({
-        ID_COL: test_ids,
-        TARGET: preds,
-    })
-    submission.to_csv(sub_path, index=False)
+    full_submission.to_csv(sub_path, index=False)
 
     print(f"\n[saved] {sub_path}")
-    print(f"        Rows: {len(submission):,}")
-    print(f"        Head:\n{submission.head(3).to_string(index=False)}")
+    print(f"        Total rows : {len(full_submission):,}  (expected: {len(test_df):,})")
+    print(f"        Head:\n{full_submission.head(3).to_string(index=False)}")
     print(f"\nDone in {time.time() - t_start:.1f}s")
-    print(f"\nNext step: submit {sub_path.name} to Kaggle and record public LB score.")
 
 
 if __name__ == "__main__":
