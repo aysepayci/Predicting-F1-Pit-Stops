@@ -16,6 +16,7 @@ from sklearn.preprocessing import LabelEncoder
 from .race_features import RaceFeatures
 from .tyre_features import TyreFeatures
 from .driver_features import DriverFeatures
+from .advanced_features import AdvancedFeatures
 
 # Columns to drop before modelling
 _DROP = ["id", "PitNextLap", "Race", "Driver", "Compound", "Year", "race_uid"]
@@ -53,6 +54,11 @@ def build_features(
     driver_transformer = DriverFeatures()
     train = driver_transformer.transform(train)
     test  = driver_transformer.transform(test) if test is not None else None
+
+    # ── 3b. Advanced features ─────────────────────────────────────────────
+    adv_transformer = AdvancedFeatures()
+    train = adv_transformer.transform(train)
+    test  = adv_transformer.transform(test) if test is not None else None
 
     # ── 4. Label encode low-cardinality categoricals ─────────────────────────
     for col in _CATS:
