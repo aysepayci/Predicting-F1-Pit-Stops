@@ -45,15 +45,7 @@ def main() -> None:
 
     # Groups for CV — must be built AFTER drop_testing cleans the data
     # Re-create race_uid from the cleaned train_df
-    cleaned_mask = train_df["Race"] != "Pre-Season Testing"
-    groups = (
-        train_df.loc[cleaned_mask, "Race"].str.replace(" ", "_")
-        + "_"
-        + train_df.loc[cleaned_mask, "Year"].astype(str)
-    ).reset_index(drop=True)
-
     print(f"      Features  : {len(feature_names)}")
-    print(f"      Groups    : {groups.nunique()} unique races")
 
     # ── 3. CV ─────────────────────────────────────────────────────────────────
     print("\n[3/4] Running cross-validation...")
@@ -76,7 +68,6 @@ def main() -> None:
     results = run_cv(
         X         = X_train,
         y         = y_train,
-        groups    = groups,
         build_model_fn = lambda: LGBMModel(config),
         n_splits  = N_FOLDS,
         seed      = RANDOM_SEED,
