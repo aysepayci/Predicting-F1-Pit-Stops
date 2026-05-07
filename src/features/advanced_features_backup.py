@@ -8,7 +8,6 @@ New features:
   3. CV-safe Driver × Race target encoding
   4. Lap time trend features (is pace dropping?)
   5. Strategic window features (pit now vs wait)
-  6. Year-based interactions (2023 real vs 2022/24/25 synthetic)
 """
 import pandas as pd
 import numpy as np
@@ -114,33 +113,5 @@ class AdvancedFeatures(BaseTransformer):
             # Use per-race z-score proxy: compare to rough expected range
             df["laptime_is_slow"] = (df["LapTime (s)"] > 100).astype(int)
             df["laptime_is_fast"] = (df["LapTime (s)"] < 70).astype(int)
-
-        # ── 7. Year-based interactions (CRITICAL for synthetic data) ─────────
-        # Discussion finding: 2023 = real F1 (%1 pit rate), 2022/24/25 = synthetic (%26-30)
-        # Model needs to learn different patterns per year type
-        if "Year" in df.columns:
-            df["is_2023"] = (df["Year"] == 2023).astype(int)
-            df["is_synthetic_year"] = (df["Year"] != 2023).astype(int)
-            
-            # TyreLife behaves differently in real vs synthetic years
-            df["tyre_x_year_2023"] = df["TyreLife"] * df["is_2023"]
-            df["tyre_x_year_synth"] = df["TyreLife"] * df["is_synthetic_year"]
-            
-            # Stint progression differs by year type
-            df["stint_x_year_2023"] = df["Stint"] * df["is_2023"]
-            df["stint_x_year_synth"] = df["Stint"] * df["is_synthetic_year"]
-            
-            # Race progress patterns differ
-            df["progress_x_year_2023"] = df["RaceProgress"] * df["is_2023"]
-            df["progress_x_year_synth"] = df["RaceProgress"] * df["is_synthetic_year"]
-            
-            # Critical ratio × year interaction
-            if "tyre_to_lap_ratio" in df.columns:
-                df["tyre_ratio_x_year_2023"] = df["tyre_to_lap_ratio"] * df["is_2023"]
-                df["tyre_ratio_x_year_synth"] = df["tyre_to_lap_ratio"] * df["is_synthetic_year"]
-            
-            # Degradation pattern differs by year
-            if "deg_per_lap" in df.columns:
-                df["deg_x_year_2023"] = df["deg_per_lap"] * df["is_2023"]
 
         return df

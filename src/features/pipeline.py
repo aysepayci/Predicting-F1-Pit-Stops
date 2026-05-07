@@ -19,10 +19,10 @@ from .driver_features import DriverFeatures
 from .advanced_features import AdvancedFeatures
 
 # Columns to drop before modelling
-_DROP = ["id", "PitNextLap", "Race", "Driver", "Compound", "Year", "race_uid"]
+_DROP = ["id", "PitNextLap", "Race", "Driver", "Compound", "race_uid"]
 
 # Categorical columns for label encoding
-_CATS = ["Compound", "Race"]  # Driver handled separately (high cardinality)
+_CATS = ["Compound", "Race","Year"]  # Driver handled separately (high cardinality)
 
 
 def build_features(
